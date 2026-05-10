@@ -1,0 +1,12 @@
+spring:
+  data:
+    mongodb:
+      database: eventx-test
+  mongodb:
+    embedded:
+      version: 7.0.12
+
+app:
+  jwt:
+    secret: RXZlbnRYU3VwZXJTZWNyZXRLZXlGb3JKV1RUb2tlbkdlbmVyYXRpb25BbmRWYWxpZGF0aW9uMTIzNDU2
+    expiration-ms: 3600000

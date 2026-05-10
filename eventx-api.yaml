@@ -1,0 +1,1273 @@
+﻿openapi: 3.0.3
+info:
+  title: EventX Manager API
+  version: 2.1.0
+  description: |
+    API REST per la gestione della compravendita di biglietti per eventi su territorio nazionale.
+    Espone endpoint per **Utenti**, **Eventi**, **Location**, **Recensioni** e **Biglietti**.
+
+    ## Autenticazione
+    Tutti gli endpoint (eccetto registrazione e login) richiedono un token JWT nell'header:
+    ```
+    Authorization: Bearer <token>
+    ```
+    Il token si ottiene chiamando `POST /api/v1/utenti/login` o `POST /api/v1/utenti/login/username`.
+servers:
+  - url: http://localhost:8080
+    description: Local dev server
+
+# Sicurezza globale: tutti gli endpoint la ereditano salvo override esplicito
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Users
+    description: Registrazione, autenticazione e gestione profilo utente
+  - name: Events
+    description: CRUD eventi e aggiornamento stato
+  - name: Locations
+    description: CRUD venue / luoghi degli eventi
+  - name: Reviews
+    description: Recensioni su eventi, location e artisti
+  - name: Tickets
+    description: Acquisto, scambio e consultazione biglietti
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+
+  # ── USERS ─────────────────────────────────────────────────────────────────
+
+  /api/v1/utenti:
+    post:
+      tags: [Users]
+      summary: Registra un nuovo utente
+      security: []   # endpoint pubblico — nessun token richiesto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequestDTO'
+            example:
+              username: mario_rossi
+              email: mario.rossi@example.com
+              password: MySecret123
+              firstName: Mario
+              lastName: Rossi
+              paypalEmail: mario.rossi@paypal.com
+      responses:
+        '201':
+          description: Utente creato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    get:
+      tags: [Users]
+      summary: Lista utenti (filtro opzionale per username)
+      parameters:
+        - in: query
+          name: cerca
+          description: Ricerca parziale case-insensitive sullo username
+          schema:
+            type: string
+          example: mario
+      responses:
+        '200':
+          description: Lista utenti
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponseDTO'
+
+  /api/v1/utenti/login:
+    post:
+      tags: [Users]
+      summary: Login tramite email e password
+      security: []   # endpoint pubblico — nessun token richiesto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestDTO'
+            example:
+              email: mario.rossi@example.com
+              password: MySecret123
+      responses:
+        '200':
+          description: Login effettuato — restituisce token JWT e profilo utente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/utenti/login/username:
+    post:
+      tags: [Users]
+      summary: Login tramite username e password
+      security: []   # endpoint pubblico — nessun token richiesto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsernameLoginRequestDTO'
+            example:
+              username: mario_rossi
+              password: MySecret123
+      responses:
+        '200':
+          description: Login effettuato — restituisce token JWT e profilo utente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/utenti/{id}:
+    get:
+      tags: [Users]
+      summary: Dettaglio utente per ID
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Utente trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Users]
+      summary: Elimina utente
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Utente eliminato
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/utenti/{id}/profilo:
+    put:
+      tags: [Users]
+      summary: Aggiorna i dati del profilo utente
+      description: |
+        Modifica username, email, nome, cognome, telefono e email PayPal.
+        Richiede la **password corrente** per confermare l'identità del chiamante.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequestDTO'
+            example:
+              currentPassword: "MySecret123"
+              username: "mario_rossi"
+              email: "mario.rossi@example.com"
+              firstName: "Mario"
+              lastName: "Rossi"
+              phone: "3331234567"
+              paypalEmail: "mario.rossi@paypal.com"
+      responses:
+        '200':
+          description: Profilo aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/utenti/{id}/password:
+    patch:
+      tags: [Users]
+      summary: Modifica la password dell'utente
+      description: |
+        Richiede la **password corrente** e la **nuova password** (minimo 8 caratteri).
+        Non restituisce corpo in caso di successo (204).
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequestDTO'
+            example:
+              currentPassword: "MySecret123"
+              newPassword: "NewSecret456"
+      responses:
+        '204':
+          description: Password modificata con successo
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+  /api/v1/utenti/email/{email}:
+    get:
+      tags: [Users]
+      summary: Dettaglio utente per email
+      parameters:
+        - in: path
+          name: email
+          required: true
+          schema:
+            type: string
+            format: email
+          example: mario.rossi@example.com
+      responses:
+        '200':
+          description: Utente trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── EVENTS ────────────────────────────────────────────────────────────────
+
+  /api/v1/eventi:
+    post:
+      tags: [Events]
+      summary: Crea un nuovo evento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequestDTO'
+            example:
+              creationId: "user_abc123"
+              name: "Rock in Roma 2026"
+              description: "Festival rock estivo"
+              locationId: "loc_xyz789"
+              date: "2026-07-15T21:00:00"
+              duration: 180
+              price: 45.00
+              capacity: 5000
+              expectedPublic: 4500
+              status: PUBLISHED
+      responses:
+        '201':
+          description: Evento creato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    get:
+      tags: [Events]
+      summary: Lista eventi con filtri opzionali
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/EventStatus'
+        - in: query
+          name: name
+          description: Ricerca parziale case-insensitive sul nome
+          schema:
+            type: string
+          example: Rock
+        - in: query
+          name: creationId
+          description: Filtra per ID utente creatore
+          schema:
+            type: string
+        - in: query
+          name: locationId
+          description: Filtra per ID location
+          schema:
+            type: string
+        - in: query
+          name: dal
+          schema:
+            type: string
+            format: date-time
+          example: '2026-06-01T00:00:00'
+        - in: query
+          name: al
+          schema:
+            type: string
+            format: date-time
+          example: '2026-08-31T23:59:59'
+      responses:
+        '200':
+          description: Lista eventi
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventResponseDTO'
+
+  /api/v1/eventi/{id}:
+    get:
+      tags: [Events]
+      summary: Dettaglio evento per ID
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Evento trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponseDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Events]
+      summary: Aggiorna evento
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequestDTO'
+      responses:
+        '200':
+          description: Evento aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Events]
+      summary: Elimina evento
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Evento eliminato
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/eventi/{id}/stato:
+    patch:
+      tags: [Events]
+      summary: Aggiorna solo lo stato dell'evento
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - in: query
+          name: status
+          required: true
+          schema:
+            $ref: '#/components/schemas/EventStatus'
+      responses:
+        '200':
+          description: Stato aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponseDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── LOCATIONS ─────────────────────────────────────────────────────────────
+
+  /api/v1/locations:
+    post:
+      tags: [Locations]
+      summary: Crea una nuova location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationDTO'
+            example:
+              userId: "user_abc123"
+              name: "Stadio Olimpico"
+              description: "Impianto sportivo multifunzione"
+              address: "Viale dei Gladiatori 2"
+              city: "Roma"
+              province: "RM"
+              region: "Lazio"
+              cap: 00135
+              gpsCoord: ""
+      responses:
+        '201':
+          description: Location creata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    get:
+      tags: [Locations]
+      summary: Lista location con filtri opzionali
+      parameters:
+        - in: query
+          name: userId
+          description: Filtra per ID utente creatore
+          schema:
+            type: string
+        - in: query
+          name: city
+          description: Ricerca parziale case-insensitive sulla città
+          schema:
+            type: string
+          example: Roma
+        - in: query
+          name: name
+          description: Ricerca parziale case-insensitive sul nome
+          schema:
+            type: string
+          example: Stadio
+      responses:
+        '200':
+          description: Lista location
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationResponseDTO'
+
+  /api/v1/locations/{id}:
+    get:
+      tags: [Locations]
+      summary: Dettaglio location per ID
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Location trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponseDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Locations]
+      summary: Aggiorna location
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationDTO'
+      responses:
+        '200':
+          description: Location aggiornata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Locations]
+      summary: Elimina location
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Location eliminata
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── REVIEWS ───────────────────────────────────────────────────────────────
+
+  /api/v1/reviews:
+    post:
+      tags: [Reviews]
+      summary: Crea una recensione
+      description: |
+        Almeno uno tra `locationId`, `eventId` e `artistId` deve essere valorizzato.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequestDTO'
+            example:
+              userId: "user_abc123"
+              eventId: "evt_xyz789"
+              vote: 5
+              title: "Concerto fantastico"
+              description: "Organizzazione perfetta, suono eccellente."
+      responses:
+        '201':
+          description: Recensione creata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    get:
+      tags: [Reviews]
+      summary: Lista recensioni con filtri opzionali
+      description: |
+        Usa uno dei query parameter per filtrare. Se nessun filtro è fornito restituisce tutte le recensioni.
+      parameters:
+        - in: query
+          name: userId
+          description: Filtra le recensioni scritte dall'utente
+          schema:
+            type: string
+        - in: query
+          name: locationId
+          description: Filtra le recensioni sulla location
+          schema:
+            type: string
+        - in: query
+          name: eventId
+          description: Filtra le recensioni sull'evento
+          schema:
+            type: string
+        - in: query
+          name: artistId
+          description: Filtra le recensioni sull'artista
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista recensioni
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReviewResponseDTO'
+
+  /api/v1/reviews/{id}:
+    get:
+      tags: [Reviews]
+      summary: Dettaglio recensione per ID
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Recensione trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponseDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Reviews]
+      summary: Aggiorna recensione
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequestDTO'
+      responses:
+        '200':
+          description: Recensione aggiornata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Reviews]
+      summary: Elimina recensione
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Recensione eliminata
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── TICKETS ───────────────────────────────────────────────────────────────
+
+  /api/v1/tickets/buy:
+    post:
+      tags: [Tickets]
+      summary: Acquista un biglietto
+      description: |
+        Crea un nuovo Ticket associato all'utente e all'evento.
+        Aggiorna automaticamente `activeTickets` nel profilo dell'acquirente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketBuyRequestDTO'
+            example:
+              userId: "user_abc123"
+              eventId: "evt_xyz789"
+              position: "Platea A - Fila 3 - Posto 12"
+      responses:
+        '201':
+          description: Biglietto acquistato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tickets/{id}/exchange:
+    patch:
+      tags: [Tickets]
+      summary: Scambia il biglietto con un altro utente
+      description: |
+        Trasferisce la proprietà del biglietto dal proprietario corrente a `targetUserId`.
+        Aggiorna automaticamente `activeTickets` / `lastTickets` di entrambi gli utenti.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - in: query
+          name: targetUserId
+          required: true
+          description: ID dell'utente destinatario del biglietto
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Biglietto trasferito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponseDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tickets/{id}:
+    get:
+      tags: [Tickets]
+      summary: Dettaglio biglietto per ID
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Biglietto trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponseDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Tickets]
+      summary: Elimina biglietto
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Biglietto eliminato
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tickets:
+    get:
+      tags: [Tickets]
+      summary: Lista biglietti per utente o per evento
+      description: |
+        Obbligatorio fornire almeno uno tra `userId` e `eventId`.
+        Senza filtri la richiesta viene rifiutata con `400`.
+      parameters:
+        - in: query
+          name: userId
+          description: Filtra i biglietti dell'utente
+          schema:
+            type: string
+        - in: query
+          name: eventId
+          description: Filtra i biglietti dell'evento
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista biglietti
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketResponseDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+
+  parameters:
+    IdPath:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+      description: ID MongoDB del documento
+
+  responses:
+    BadRequest:
+      description: Richiesta non valida (validazione fallita)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Risorsa non trovata
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Risorsa duplicata (email o username già in uso)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Token JWT mancante, scaduto o non valido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: 401
+            errore: Non autorizzato
+            messaggio: Token JWT non valido o scaduto
+            timestamp: '2026-04-26T10:00:00'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT ottenuto tramite il login. Da inviare nell'header:
+        `Authorization: Bearer <token>`
+
+  schemas:
+
+    # ── ENUMS ────────────────────────────────────────────────────────────────
+
+    EventStatus:
+      type: string
+      enum: [PUBLISHED, ACTIVE, ENDED]
+      description: Stato del ciclo di vita dell'evento
+
+    # ── USER ─────────────────────────────────────────────────────────────────
+
+    LoginResponseDTO:
+      type: object
+      description: Risposta restituita dagli endpoint di login. Contiene il token JWT e i dati dell'utente.
+      properties:
+        token:
+          type: string
+          description: Token JWT da utilizzare nell'header Authorization per le successive chiamate
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        tokenType:
+          type: string
+          description: Tipo di token — sempre "Bearer"
+          default: Bearer
+          example: Bearer
+        user:
+          $ref: '#/components/schemas/UserResponseDTO'
+
+    UserRequestDTO:
+      type: object
+      required: [username, email]
+      properties:
+        username:
+          type: string
+          example: mario_rossi
+        email:
+          type: string
+          format: email
+          example: mario.rossi@example.com
+        password:
+          type: string
+          minLength: 8
+          description: Obbligatoria in creazione; opzionale in aggiornamento (se assente la password non cambia)
+          example: MySecret123
+        firstName:
+          type: string
+          description: Nome dell'utente
+          example: Mario
+        lastName:
+          type: string
+          description: Cognome dell'utente
+          example: Rossi
+        phone:
+          type: string
+          description: Ignorato in fase di registrazione (inizializzato a ""); modificabile tramite aggiornamento utente
+          example: "3331234567"
+        paypalEmail:
+          type: string
+          format: email
+          description: Email dell'account PayPal dell'utente, usata per pagamenti. Può differire dall'email di accesso.
+          example: mario.rossi@paypal.com
+
+    UserResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+          description: Nome dell'utente
+          example: Mario
+        lastName:
+          type: string
+          description: Cognome dell'utente
+          example: Rossi
+        phone:
+          type: string
+          description: Numero di telefono; vuoto alla registrazione, modificabile tramite aggiornamento utente
+          example: "3331234567"
+        paypalEmail:
+          type: string
+          format: email
+          description: Email PayPal dell'utente
+          example: mario.rossi@paypal.com
+        isAdmin:
+          type: boolean
+        isArtist:
+          type: boolean
+        isLocation:
+          type: boolean
+        activeTickets:
+          type: array
+          items:
+            type: string
+          description: ID dei biglietti attivi dell'utente
+        lastTickets:
+          type: array
+          items:
+            type: string
+          description: ID dei biglietti scaduti/ceduti
+        activeEvents:
+          type: array
+          items:
+            type: string
+          description: ID degli eventi attivi creati dall'utente
+        lastEvents:
+          type: array
+          items:
+            type: string
+          description: ID degli eventi conclusi creati dall'utente
+        reviews:
+          type: array
+          items:
+            type: string
+          description: ID delle recensioni scritte dall'utente
+        registrationDate:
+          type: string
+          format: date-time
+
+    UpdateProfileRequestDTO:
+      type: object
+      required: [currentPassword]
+      description: "Tutti i campi tranne currentPassword sono opzionali: invia solo i campi che vuoi modificare. Lo username non è modificabile dopo la registrazione."
+      properties:
+        currentPassword:
+          type: string
+          description: Password corrente — richiesta per confermare l'identità
+          example: MySecret123
+        email:
+          type: string
+          format: email
+          description: Nuova email di accesso (opzionale)
+          example: mario.rossi@example.com
+        firstName:
+          type: string
+          description: Nome dell'utente (opzionale)
+          example: Mario
+        lastName:
+          type: string
+          description: Cognome dell'utente (opzionale)
+          example: Rossi
+        phone:
+          type: string
+          description: Numero di telefono (opzionale)
+          example: "3331234567"
+        paypalEmail:
+          type: string
+          format: email
+          description: Email account PayPal (opzionale)
+          example: mario.rossi@paypal.com
+
+    ChangePasswordRequestDTO:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          description: Password attualmente in uso
+          example: MySecret123
+        newPassword:
+          type: string
+          minLength: 8
+          description: Nuova password (minimo 8 caratteri)
+          example: NewSecret456
+
+    LoginRequestDTO:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: mario.rossi@example.com
+        password:
+          type: string
+          example: MySecret123
+
+    UsernameLoginRequestDTO:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          example: mario_rossi
+        password:
+          type: string
+          example: MySecret123
+
+    # ── EVENT ─────────────────────────────────────────────────────────────────
+
+    EventRequestDTO:
+      type: object
+      required: [creationId, name, locationId, date, duration, capacity]
+      properties:
+        creationId:
+          type: string
+          description: ID dell'utente che crea l'evento
+        name:
+          type: string
+          example: Rock in Roma 2026
+        description:
+          type: string
+        locationId:
+          type: string
+          description: ID della Location (documento separato nella collection locations)
+        date:
+          type: string
+          format: date-time
+          example: '2026-07-15T21:00:00'
+        duration:
+          type: integer
+          minimum: 1
+          description: Durata in minuti
+          example: 180
+        price:
+          type: number
+          format: double
+          minimum: 0
+          example: 45.00
+        capacity:
+          type: integer
+          minimum: 1
+          description: Capienza massima
+          example: 5000
+        expectedPublic:
+          type: integer
+          minimum: 0
+          description: Pubblico atteso
+          example: 4500
+        status:
+          $ref: '#/components/schemas/EventStatus'
+
+    EventResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        creationId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        locationId:
+          type: string
+        date:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+        price:
+          type: number
+          format: double
+        capacity:
+          type: integer
+        expectedPublic:
+          type: integer
+        status:
+          $ref: '#/components/schemas/EventStatus'
+        reviews:
+          type: array
+          items:
+            type: string
+          description: ID delle recensioni associate all'evento
+        registrationDate:
+          type: string
+          format: date-time
+
+    # ── LOCATION ──────────────────────────────────────────────────────────────
+
+    LocationDTO:
+      type: object
+      required: [userId, name, address, city]
+      properties:
+        userId:
+          type: string
+          description: ID dell'utente che registra la location
+        name:
+          type: string
+          example: Stadio Olimpico
+        description:
+          type: string
+        address:
+          type: string
+          example: Viale dei Gladiatori 2
+        city:
+          type: string
+          example: Roma
+        province:
+          type: string
+          example: RM
+        region:
+          type: string
+          example: Lazio
+        cap:
+          type: integer
+          example: 00135
+        gpsCoord:
+          type: string
+          description: "Coordinate GPS opzionali (formato: lat,lng). Verrà valorizzato tramite Google Maps API."
+          example: ""
+
+    LocationResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        region:
+          type: string
+        cap:
+          type: integer
+        gpsCoord:
+          type: string
+        reviews:
+          type: array
+          items:
+            type: string
+          description: ID delle recensioni associate alla location
+        registrationDate:
+          type: string
+          format: date-time
+
+    # ── REVIEW ────────────────────────────────────────────────────────────────
+
+    ReviewRequestDTO:
+      type: object
+      required: [userId, vote]
+      description: Almeno uno tra locationId, eventId e artistId deve essere valorizzato.
+      properties:
+        userId:
+          type: string
+          description: ID dell'utente autore
+        locationId:
+          type: string
+          nullable: true
+          description: ID della Location recensita (null se non applicabile)
+        eventId:
+          type: string
+          nullable: true
+          description: ID dell'Evento recensito (null se non applicabile)
+        artistId:
+          type: string
+          nullable: true
+          description: ID dell'artista/utente recensito (null se non applicabile)
+        vote:
+          type: integer
+          minimum: 0
+          maximum: 5
+          example: 5
+        title:
+          type: string
+          example: Concerto fantastico
+        description:
+          type: string
+          example: Organizzazione perfetta, suono eccellente.
+
+    ReviewResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        locationId:
+          type: string
+          nullable: true
+        eventId:
+          type: string
+          nullable: true
+        artistId:
+          type: string
+          nullable: true
+        vote:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        registrationDate:
+          type: string
+          format: date-time
+
+    # ── TICKET ────────────────────────────────────────────────────────────────
+
+    TicketBuyRequestDTO:
+      type: object
+      required: [userId, eventId]
+      properties:
+        userId:
+          type: string
+          description: ID dell'acquirente
+        eventId:
+          type: string
+          description: ID dell'evento per cui si acquista il biglietto
+        position:
+          type: string
+          description: Posizione/settore (opzionale)
+          example: "Platea A - Fila 3 - Posto 12"
+
+    TicketResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        position:
+          type: string
+        userId:
+          type: string
+          description: ID del proprietario corrente
+        eventId:
+          type: string
+        isBlockchain:
+          type: boolean
+          description: true se il biglietto è tokenizzato su blockchain
+          default: false
+        isWinner:
+          type: boolean
+          description: true se il biglietto ha vinto un'estrazione
+          default: false
+        hash:
+          type: string
+          description: Hash blockchain (stringa vuota fino all'integrazione)
+          default: ""
+        registrationDate:
+          type: string
+          format: date-time
+
+    # ── ERROR ─────────────────────────────────────────────────────────────────
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 404
+        errore:
+          type: string
+          example: Not Found
+        messaggio:
+          type: string
+          example: Risorsa non trovata con id - abc123
+        timestamp:
+          type: string
+          format: date-time
+

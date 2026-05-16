@@ -19,6 +19,8 @@ app:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:3600000}
 
+ADMINS: ${ADMINS:}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

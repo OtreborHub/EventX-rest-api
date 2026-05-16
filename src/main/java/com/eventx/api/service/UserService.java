@@ -37,7 +37,7 @@ public class UserService {
                 .firstName(request.firstName())
                 .lastName(request.lastName())
                 .phone("")
-                .paypalEmail(request.paypalEmail())
+                .paypalEmail(!request.paypalEmail().isEmpty() ? request.paypalEmail() : "")
                 .isAdmin(false)
                 .isArtist(false)
                 .isLocation(false)

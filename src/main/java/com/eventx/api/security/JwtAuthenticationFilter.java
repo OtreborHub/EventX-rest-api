@@ -6,9 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -21,13 +19,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
-    private final RestAuthenticationEntryPoint authenticationEntryPoint;
-
-    /** Path GET pubblici: un token invalido su queste rotte NON blocca la richiesta. */
-    private static final Set<String> PUBLIC_GET_PREFIXES = Set.of(
-            "/api/v1/eventi",
-            "/api/v1/artisti"
-    );
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -50,24 +41,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 }
             }
-            filterChain.doFilter(request, response);
         } catch (JwtException | IllegalArgumentException ex) {
+            // Token invalido: pulisco il contesto e lascio proseguire la chain.
+            // Sarà Spring Security a rispondere 401 se l'endpoint è protetto.
             SecurityContextHolder.clearContext();
-            // Se il path è pubblico (GET eventi), ignora il token invalido e prosegui
-            if (isPublicGetPath(request)) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-            authenticationEntryPoint.commence(request, response,
-                    new org.springframework.security.authentication.BadCredentialsException("Invalid JWT", ex));
         }
-    }
-
-    private boolean isPublicGetPath(HttpServletRequest request) {
-        if (!HttpMethod.GET.matches(request.getMethod())) {
-            return false;
-        }
-        String path = request.getRequestURI();
-        return PUBLIC_GET_PREFIXES.stream().anyMatch(path::startsWith);
+        filterChain.doFilter(request, response);
     }
 }

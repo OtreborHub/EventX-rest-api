@@ -6,6 +6,8 @@ spring:
     embedded:
       version: 7.0.12
 
+ADMINS: ""
+
 app:
   jwt:
     secret: RXZlbnRYU3VwZXJTZWNyZXRLZXlGb3JKV1RUb2tlbkdlbmVyYXRpb25BbmRWYWxpZGF0aW9uMTIzNDU2

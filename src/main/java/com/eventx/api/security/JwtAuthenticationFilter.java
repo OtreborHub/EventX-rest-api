@@ -48,4 +48,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         filterChain.doFilter(request, response);
     }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+
+        String path = request.getServletPath();
+
+        return path.equals("/api/v1/utenti")
+                || path.equals("/api/v1/utenti/login")
+                || path.equals("/api/v1/utenti/login/username")
+                || path.startsWith("/api/v1/eventi")
+                || path.startsWith("/api/v1/artisti")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs");
+    }
 }

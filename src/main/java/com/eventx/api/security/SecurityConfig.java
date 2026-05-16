@@ -23,7 +23,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:3000}")
     private String corsAllowedOrigins;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -46,6 +46,8 @@ public class SecurityConfig {
                                 "/api/v1/utenti/login/username")
                         .permitAll()
                         .requestMatchers(
+                                "/",
+                                "/index.html",
                                 "/v3/api-docs/**",
                                 "/openapi/**",
                                 "/swagger-ui/**",

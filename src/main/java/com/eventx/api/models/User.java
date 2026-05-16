@@ -26,7 +26,6 @@ public class User {
     private String lastName;
     private String phone;
     private String paypalEmail;
-    private boolean isAdmin;
     private boolean isArtist;
     private boolean isLocation;
     @Builder.Default

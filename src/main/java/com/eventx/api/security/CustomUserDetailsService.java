@@ -4,6 +4,7 @@ import com.eventx.api.exceptions.ResourceNotFoundException;
 import com.eventx.api.models.User;
 import com.eventx.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -14,10 +15,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
+    @Value("${ADMINS:}")
+    private String admins;
+
     @Override
     public UserDetails loadUserByUsername(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Utente non trovato con id - " + userId));
-        return new UserPrincipal(user);
+        return new UserPrincipal(user, admins);
     }
 }

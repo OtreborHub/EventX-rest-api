@@ -13,8 +13,8 @@ info:
     ```
     Il token si ottiene chiamando `POST /api/v1/utenti/login` o `POST /api/v1/utenti/login/username`.
 servers:
-  - url: http://localhost:8080
-    description: Local dev server
+  - url: /
+    description: Server corrente (locale o Railway)
 
 # Sicurezza globale: tutti gli endpoint la ereditano salvo override esplicito
 security:

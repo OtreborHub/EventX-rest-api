@@ -3,25 +3,26 @@ package com.eventx.api.security;
 import com.eventx.api.models.User;
 import java.util.Collection;
 import java.util.List;
+
+import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public class UserPrincipal implements UserDetails {
 
+    @Getter
     private final User user;
+    private final String admins;
 
-    public UserPrincipal(User user) {
+    public UserPrincipal(User user, String admins) {
         this.user = user;
-    }
-
-    public User getUser() {
-        return user;
+        this.admins = admins != null ? admins : "";
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (user.isAdmin()) {
+        if (admins.contains(user.getUsername())) {
             return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
         return List.of();

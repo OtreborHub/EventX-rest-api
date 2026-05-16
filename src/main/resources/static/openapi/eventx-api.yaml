@@ -296,6 +296,7 @@ paths:
     get:
       tags: [Events]
       summary: Lista eventi con filtri opzionali
+      security: []   # endpoint pubblico — nessun token richiesto
       parameters:
         - in: query
           name: status
@@ -343,6 +344,7 @@ paths:
     get:
       tags: [Events]
       summary: Dettaglio evento per ID
+      security: []   # endpoint pubblico — nessun token richiesto
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:

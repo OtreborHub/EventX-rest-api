@@ -14,26 +14,23 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "users")
-public class User {
+@Document(collection = "artists")
+public class Artist {
 
+    /** L'ID corrisponde all'ID dell'utente (1:1) */
     @Id
     private String id;
-    private String username;
-    private String email;
-    private String passwordHash;
     private String firstName;
     private String lastName;
+    private String alias;
+    private String piva;
     private String phone;
-    private String paypalEmail;
-    private boolean isAdmin;
-    private boolean isArtist;
-    private boolean isLocation;
     @Builder.Default
-    private List<String> activeTickets = new ArrayList<>();
+    private List<String> activeEvents = new ArrayList<>();
     @Builder.Default
-    private List<String> lastTickets = new ArrayList<>();
+    private List<String> lastEvents = new ArrayList<>();
     @Builder.Default
     private List<String> reviews = new ArrayList<>();
     private LocalDateTime registrationDate;
 }
+

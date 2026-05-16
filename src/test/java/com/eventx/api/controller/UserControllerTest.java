@@ -64,15 +64,9 @@ class UserControllerTest {
                 "user-1",
                 "mario_rossi",
                 "mario.rossi@example.com",
-                "Mario",
-                "Rossi",
-                "",
                 "mario.rossi@paypal.com",
                 false,
                 false,
-                false,
-                List.of(),
-                List.of(),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -87,9 +81,7 @@ class UserControllerTest {
                                 {
                                   "username": "mario_rossi",
                                   "email": "mario.rossi@example.com",
-                                  "password": "MySecret123",
-                                  "firstName": "Mario",
-                                  "lastName": "Rossi"
+                                  "password": "MySecret123"
                                 }
                                 """))
                 .andExpect(status().isCreated())

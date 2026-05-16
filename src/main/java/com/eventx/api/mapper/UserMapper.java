@@ -14,17 +14,11 @@ public final class UserMapper {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getPhone(),
                 user.getPaypalEmail(),
-                user.isAdmin(),
                 user.isArtist(),
                 user.isLocation(),
                 List.copyOf(user.getActiveTickets()),
                 List.copyOf(user.getLastTickets()),
-                List.copyOf(user.getActiveEvents()),
-                List.copyOf(user.getLastEvents()),
                 List.copyOf(user.getReviews()),
                 user.getRegistrationDate()
         );

@@ -33,18 +33,12 @@ public class UserService {
         User user = User.builder()
                 .username(request.username())
                 .email(request.email())
-                .password(passwordEncoder.encode(request.password()))
-                .firstName(request.firstName())
-                .lastName(request.lastName())
-                .phone("")
-                .paypalEmail(!request.paypalEmail().isEmpty() ? request.paypalEmail() : "")
-                .isAdmin(false)
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .paypalEmail(request.paypalEmail() != null ? request.paypalEmail() : "")
                 .isArtist(false)
                 .isLocation(false)
                 .activeTickets(new ArrayList<>())
                 .lastTickets(new ArrayList<>())
-                .activeEvents(new ArrayList<>())
-                .lastEvents(new ArrayList<>())
                 .reviews(new ArrayList<>())
                 .registrationDate(LocalDateTime.now())
                 .build();
@@ -82,15 +76,6 @@ public class UserService {
             checkEmailConflict(request.email(), user.getId());
             user.setEmail(request.email());
         }
-        if (request.firstName() != null) {
-            user.setFirstName(request.firstName());
-        }
-        if (request.lastName() != null) {
-            user.setLastName(request.lastName());
-        }
-        if (request.phone() != null) {
-            user.setPhone(request.phone());
-        }
         if (request.paypalEmail() != null) {
             user.setPaypalEmail(request.paypalEmail());
         }
@@ -101,7 +86,7 @@ public class UserService {
     public void changePassword(String id, ChangePasswordRequestDto request) {
         User user = getEntityById(id);
         ensureCurrentPassword(user, request.currentPassword());
-        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
     }
 
@@ -152,50 +137,8 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void syncEventOwnership(String oldUserId, String newUserId, String eventId, EventStatus status) {
-        if (oldUserId != null && !oldUserId.equals(newUserId)) {
-            removeEventReferences(oldUserId, eventId);
-        }
-        addEventReference(newUserId, eventId, status);
-    }
-
-    public void syncEventStatus(String userId, String eventId, EventStatus status) {
-        User user = getEntityById(userId);
-        user.getActiveEvents().remove(eventId);
-        user.getLastEvents().remove(eventId);
-        if (status == EventStatus.ENDED) {
-            user.getLastEvents().add(eventId);
-        } else {
-            user.getActiveEvents().add(eventId);
-        }
-        userRepository.save(user);
-    }
-
-    public void removeEventReferences(String userId, String eventId) {
-        User user = getEntityById(userId);
-        user.getActiveEvents().remove(eventId);
-        user.getLastEvents().remove(eventId);
-        userRepository.save(user);
-    }
-
-    private void addEventReference(String userId, String eventId, EventStatus status) {
-        User user = getEntityById(userId);
-        if (status == EventStatus.ENDED) {
-            if (!user.getLastEvents().contains(eventId)) {
-                user.getLastEvents().add(eventId);
-            }
-            user.getActiveEvents().remove(eventId);
-        } else {
-            if (!user.getActiveEvents().contains(eventId)) {
-                user.getActiveEvents().add(eventId);
-            }
-            user.getLastEvents().remove(eventId);
-        }
-        userRepository.save(user);
-    }
-
     private void ensureCurrentPassword(User user, String currentPassword) {
-        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new UnauthorizedException("Credenziali non valide");
         }
     }
@@ -216,4 +159,3 @@ public class UserService {
                 });
     }
 }
-

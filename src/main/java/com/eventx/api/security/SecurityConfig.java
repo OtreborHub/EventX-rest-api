@@ -45,6 +45,12 @@ public class SecurityConfig {
                                 "/api/v1/utenti/login",
                                 "/api/v1/utenti/login/username")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/eventi",
+                                "/api/v1/eventi/**",
+                                "/api/v1/artisti",
+                                "/api/v1/artisti/**")
+                        .permitAll()
                         .requestMatchers(
                                 "/",
                                 "/index.html",

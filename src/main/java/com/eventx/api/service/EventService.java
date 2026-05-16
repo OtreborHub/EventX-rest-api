@@ -45,7 +45,6 @@ public class EventService {
                 .build();
 
         Event saved = eventRepository.save(event);
-        userService.syncEventOwnership(null, saved.getCreationId(), saved.getId(), saved.getStatus());
         return EventMapper.toResponse(saved);
     }
 
@@ -87,17 +86,11 @@ public class EventService {
         event.setStatus(request.status() != null ? request.status() : oldStatus);
 
         Event saved = eventRepository.save(event);
-        if (!oldCreationId.equals(saved.getCreationId())) {
-            userService.syncEventOwnership(oldCreationId, saved.getCreationId(), saved.getId(), saved.getStatus());
-        } else if (oldStatus != saved.getStatus()) {
-            userService.syncEventStatus(saved.getCreationId(), saved.getId(), saved.getStatus());
-        }
         return EventMapper.toResponse(saved);
     }
 
     public void delete(String id) {
         Event event = getEntityById(id);
-        userService.removeEventReferences(event.getCreationId(), event.getId());
         eventRepository.delete(event);
     }
 
@@ -105,7 +98,6 @@ public class EventService {
         Event event = getEntityById(id);
         event.setStatus(status);
         Event saved = eventRepository.save(event);
-        userService.syncEventStatus(saved.getCreationId(), saved.getId(), saved.getStatus());
         return EventMapper.toResponse(saved);
     }
 

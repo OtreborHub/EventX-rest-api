@@ -35,14 +35,11 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    void registerShouldCreateUserAndIgnorePhoneAtRegistration() {
+    void registerShouldCreateUser() {
         UserRequestDto request = new UserRequestDto(
                 "mario_rossi",
                 "mario.rossi@example.com",
                 "MySecret123",
-                "Mario",
-                "Rossi",
-                "3331234567",
                 "mario.rossi@paypal.com"
         );
 
@@ -59,13 +56,11 @@ class UserServiceTest {
         var response = userService.register(request);
 
         assertThat(response.id()).isEqualTo("user-1");
-        assertThat(response.phone()).isEmpty();
         assertThat(response.username()).isEqualTo("mario_rossi");
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
-        assertThat(captor.getValue().getPassword()).isEqualTo("encoded-password");
-        assertThat(captor.getValue().getActiveTickets()).isEqualTo(new ArrayList<>());
+        assertThat(captor.getValue().getPasswordHash()).isEqualTo("encoded-password");
     }
 
     @Test
@@ -74,9 +69,6 @@ class UserServiceTest {
                 "mario_rossi",
                 "mario.rossi@example.com",
                 "MySecret123",
-                null,
-                null,
-                null,
                 null
         );
 
@@ -91,12 +83,7 @@ class UserServiceTest {
     void changePasswordShouldRejectWrongCurrentPassword() {
         User user = User.builder()
                 .id("user-1")
-                .password("encoded-current")
-                .activeTickets(new ArrayList<>())
-                .lastTickets(new ArrayList<>())
-                .activeEvents(new ArrayList<>())
-                .lastEvents(new ArrayList<>())
-                .reviews(new ArrayList<>())
+                .passwordHash("encoded-current")
                 .build();
 
         when(userRepository.findById("user-1")).thenReturn(Optional.of(user));

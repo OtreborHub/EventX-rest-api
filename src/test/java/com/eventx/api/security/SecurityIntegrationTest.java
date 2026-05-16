@@ -45,11 +45,11 @@ class SecurityIntegrationTest {
     private CustomUserDetailsService customUserDetailsService;
 
     @Test
-    void protectedEndpointShouldReturnUnauthorizedWithoutToken() throws Exception {
+    void eventsListShouldbefreetoReturn() throws Exception {
+        when(eventService.findAll(any(), any(), any(), any(), any(), any())).thenReturn(List.of());
         mockMvc.perform(get("/api/v1/eventi"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.errore").value("Non autorizzato"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 
     @Test
@@ -68,15 +68,9 @@ class SecurityIntegrationTest {
                         "user-1",
                         "mario_rossi",
                         "mario.rossi@example.com",
-                        "Mario",
-                        "Rossi",
-                        "",
                         "mario.rossi@paypal.com",
                         false,
                         false,
-                        false,
-                        List.of(),
-                        List.of(),
                         List.of(),
                         List.of(),
                         List.of(),
@@ -101,7 +95,7 @@ class SecurityIntegrationTest {
     void invalidJwtShouldReturnUnauthorized() throws Exception {
         when(jwtService.extractUserId("invalid-token")).thenThrow(new JwtException("invalid token"));
 
-        mockMvc.perform(get("/api/v1/eventi")
+        mockMvc.perform(get("/api/v1/utenti")
                         .header("Authorization", "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))

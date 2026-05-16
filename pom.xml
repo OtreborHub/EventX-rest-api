@@ -92,13 +92,6 @@
             <resource>
                 <directory>src/main/resources</directory>
             </resource>
-            <resource>
-                <directory>${project.basedir}</directory>
-                <includes>
-                    <include>eventx-api.yaml</include>
-                </includes>
-                <targetPath>static/openapi</targetPath>
-            </resource>
         </resources>
         <plugins>
             <plugin>

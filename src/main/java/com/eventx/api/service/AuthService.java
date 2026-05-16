@@ -33,7 +33,7 @@ public class AuthService {
     }
 
     private LoginResponseDto buildLoginResponse(User user, String rawPassword) {
-        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
             throw new UnauthorizedException("Credenziali non valide");
         }
         return new LoginResponseDto(

@@ -2,6 +2,7 @@ package com.eventx.api.controller;
 
 import com.eventx.api.dto.EventRequestDto;
 import com.eventx.api.dto.EventResponseDto;
+import com.eventx.api.dto.EventUpdateStatusRequestDto;
 import com.eventx.api.models.EventStatus;
 import com.eventx.api.service.EventService;
 import jakarta.validation.Valid;
@@ -41,11 +42,11 @@ public class EventController {
     public ResponseEntity<List<EventResponseDto>> findAll(
             @RequestParam(required = false) EventStatus status,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) String creationId,
+            @RequestParam(required = false) String plannerId,
             @RequestParam(required = false) String locationId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dal,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime al) {
-        return ResponseEntity.ok(eventService.findAll(status, name, creationId, locationId, dal, al));
+        return ResponseEntity.ok(eventService.findAll(status, name, plannerId, locationId, dal, al));
     }
 
     @GetMapping("/{id}")
@@ -55,7 +56,7 @@ public class EventController {
 
     @PutMapping("/{id}")
     public ResponseEntity<EventResponseDto> update(@PathVariable String id,
-                                                   @Valid @RequestBody EventRequestDto request) {
+                                                   @Valid @RequestBody EventUpdateStatusRequestDto request) {
         return ResponseEntity.ok(eventService.update(id, request));
     }
 

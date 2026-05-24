@@ -2,6 +2,7 @@ package com.eventx.api.service;
 
 import com.eventx.api.dto.EventRequestDto;
 import com.eventx.api.dto.EventResponseDto;
+import com.eventx.api.dto.EventUpdateStatusRequestDto;
 import com.eventx.api.exceptions.ResourceNotFoundException;
 import com.eventx.api.mapper.EventMapper;
 import com.eventx.api.models.Event;
@@ -26,11 +27,12 @@ public class EventService {
     private final UserService userService;
 
     public EventResponseDto create(EventRequestDto request) {
-        ensureUserExists(request.creationId());
-        ensureLocationExists(request.locationId());
+        ensureUserExists(request.plannerId());
+        //TODO INSERIRE VALIDAZIONE LOCATION
+        //ensureLocationExists(request.locationId());
 
         Event event = Event.builder()
-                .creationId(request.creationId())
+                .plannerId(request.plannerId())
                 .name(request.name())
                 .description(request.description())
                 .locationId(request.locationId())
@@ -38,8 +40,8 @@ public class EventService {
                 .duration(request.duration())
                 .price(request.price())
                 .capacity(request.capacity())
-                .expectedPublic(request.expectedPublic())
-                .status(request.status() != null ? request.status() : EventStatus.PUBLISHED)
+                .expectedPublic(0)
+                .status(EventStatus.PUBLISHED)
                 .reviews(new ArrayList<>())
                 .registrationDate(LocalDateTime.now())
                 .build();
@@ -48,13 +50,13 @@ public class EventService {
         return EventMapper.toResponse(saved);
     }
 
-    public List<EventResponseDto> findAll(EventStatus status, String name, String creationId, String locationId,
+    public List<EventResponseDto> findAll(EventStatus status, String name, String plannerId, String locationId,
                                           LocalDateTime dal, LocalDateTime al) {
         return eventRepository.findAll().stream()
                 .filter(event -> status == null || event.getStatus() == status)
                 .filter(event -> !StringUtils.hasText(name)
                         || event.getName().toLowerCase().contains(name.toLowerCase()))
-                .filter(event -> !StringUtils.hasText(creationId) || creationId.equals(event.getCreationId()))
+                .filter(event -> !StringUtils.hasText(plannerId) || plannerId.equals(event.getPlannerId()))
                 .filter(event -> !StringUtils.hasText(locationId) || locationId.equals(event.getLocationId()))
                 .filter(event -> dal == null || !event.getDate().isBefore(dal))
                 .filter(event -> al == null || !event.getDate().isAfter(al))
@@ -66,15 +68,14 @@ public class EventService {
         return EventMapper.toResponse(getEntityById(id));
     }
 
-    public EventResponseDto update(String id, EventRequestDto request) {
+    public EventResponseDto update(String id, EventUpdateStatusRequestDto request) {
         Event event = getEntityById(id);
-        String oldCreationId = event.getCreationId();
         EventStatus oldStatus = event.getStatus();
 
-        ensureUserExists(request.creationId());
+        ensureUserExists(request.plannerId());
         ensureLocationExists(request.locationId());
 
-        event.setCreationId(request.creationId());
+        event.setPlannerId(request.plannerId());
         event.setName(request.name());
         event.setDescription(request.description());
         event.setLocationId(request.locationId());
@@ -82,7 +83,6 @@ public class EventService {
         event.setDuration(request.duration());
         event.setPrice(request.price());
         event.setCapacity(request.capacity());
-        event.setExpectedPublic(request.expectedPublic());
         event.setStatus(request.status() != null ? request.status() : oldStatus);
 
         Event saved = eventRepository.save(event);

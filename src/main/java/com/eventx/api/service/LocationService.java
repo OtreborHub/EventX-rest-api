@@ -2,9 +2,12 @@ package com.eventx.api.service;
 
 import com.eventx.api.dto.LocationDto;
 import com.eventx.api.dto.LocationResponseDto;
+import com.eventx.api.exceptions.ConflictException;
 import com.eventx.api.exceptions.ResourceNotFoundException;
 import com.eventx.api.mapper.LocationMapper;
+import com.eventx.api.models.Artist;
 import com.eventx.api.models.Location;
+import com.eventx.api.repository.ArtistRepository;
 import com.eventx.api.repository.LocationRepository;
 import com.eventx.api.repository.UserRepository;
 import java.time.LocalDateTime;
@@ -18,8 +21,10 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class LocationService {
 
+    private final ArtistRepository artistRepository;
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     public LocationResponseDto create(LocationDto request) {
         ensureUserExists(request.userId());
@@ -38,7 +43,38 @@ public class LocationService {
                 .registrationDate(LocalDateTime.now())
                 .build();
 
-        return LocationMapper.toResponse(locationRepository.save(location));
+        Location saved = locationRepository.save(location);
+        return LocationMapper.toResponse(saved);
+    }
+
+    public LocationResponseDto subscribeAsLocation(LocationDto request) {
+        ensureUserExists(request.userId());
+        if (artistRepository.existsById(request.userId()) || locationRepository.existsById(request.userId())) {
+            throw new ConflictException("L'utente è già registrato come artista o luogo");
+        }
+
+        Location location = Location.builder()
+                .userId(request.userId())
+                .name(request.name())
+                .description(request.description())
+                .address(request.address())
+                .city(request.city())
+                .province(request.province())
+                .region(request.region())
+                .cap(request.cap())
+                .gpsCoord(request.gpsCoord())
+                .reviews(new ArrayList<>())
+                .registrationDate(LocalDateTime.now())
+                .build();
+
+        Location saved = locationRepository.save(location);
+
+        // Aggiorna il flag location sull'utente
+        var user = userService.getEntityById(request.userId());
+        user.setLocation(saved.getId());
+        userService.saveEntity(user);
+
+        return LocationMapper.toResponse(saved);
     }
 
     public List<LocationResponseDto> findAll(String userId, String city, String name) {

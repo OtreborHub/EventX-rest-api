@@ -35,8 +35,8 @@ public class UserService {
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .paypalEmail(request.paypalEmail() != null ? request.paypalEmail() : "")
-                .isArtist(false)
-                .isLocation(false)
+                .artist("")
+                .location("")
                 .activeTickets(new ArrayList<>())
                 .lastTickets(new ArrayList<>())
                 .reviews(new ArrayList<>())
@@ -68,17 +68,22 @@ public class UserService {
         userRepository.delete(user);
     }
 
-    public UserResponseDto updateProfile(String id, UpdateProfileRequestDto request) {
-        User user = getEntityById(id);
-        ensureCurrentPassword(user, request.currentPassword());
+    public UserResponseDto updateProfile(UpdateProfileRequestDto request) {
+        User user = getEntityById(request.userId());
+        ensureCurrentPassword(user, request.password());
 
         if (StringUtils.hasText(request.email()) && !request.email().equalsIgnoreCase(user.getEmail())) {
             checkEmailConflict(request.email(), user.getId());
             user.setEmail(request.email());
         }
-        if (request.paypalEmail() != null) {
+
+        if (StringUtils.hasText(request.email()) && !request.paypalEmail().equalsIgnoreCase(user.getPaypalEmail())) {
             user.setPaypalEmail(request.paypalEmail());
         }
+
+        user.setFirstName(request.firstName());
+        user.setLastName(request.lastName());
+        user.setPhone(request.phone());
 
         return UserMapper.toResponse(userRepository.save(user));
     }

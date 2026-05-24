@@ -26,8 +26,8 @@ public class User {
     private String lastName;
     private String phone;
     private String paypalEmail;
-    private boolean isArtist;
-    private boolean isLocation;
+    private String artist;
+    private String location;
     @Builder.Default
     private List<String> activeTickets = new ArrayList<>();
     @Builder.Default

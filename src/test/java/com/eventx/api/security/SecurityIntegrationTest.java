@@ -1,9 +1,9 @@
 package com.eventx.api.security;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,6 +12,8 @@ import com.eventx.api.controller.UserController;
 import com.eventx.api.dto.LoginResponseDto;
 import com.eventx.api.dto.UserResponseDto;
 import com.eventx.api.exceptions.GlobalExceptionHandler;
+import com.eventx.api.mapper.UserMapper;
+import com.eventx.api.models.User;
 import com.eventx.api.service.AuthService;
 import com.eventx.api.service.EventService;
 import com.eventx.api.service.UserService;
@@ -68,9 +70,12 @@ class SecurityIntegrationTest {
                         "user-1",
                         "mario_rossi",
                         "mario.rossi@example.com",
+                        "mario",
+                        "rossi",
                         "mario.rossi@paypal.com",
-                        false,
-                        false,
+                        "",
+                        "",
+                        "",
                         List.of(),
                         List.of(),
                         List.of(),
@@ -97,6 +102,127 @@ class SecurityIntegrationTest {
 
         mockMvc.perform(get("/api/v1/utenti")
                         .header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.messaggio").value("Token JWT non valido o scaduto"));
+    }
+
+    @Test
+    void updateProfileWithValidTokenShouldSucceed() throws Exception {
+        // 1️⃣ REGISTRAZIONE
+        String userId = "user-123";
+        String email = "mario.rossi@example.com";
+        String password = "MySecret123";
+        String validToken = "valid-jwt-token";
+
+        UserResponseDto registeredUser = new UserResponseDto(
+                userId,
+                "mario_rossi",
+                email,
+                "mario",
+                "rossi",
+                "mario.rossi@paypal.com",
+                "",
+                "",
+                "",
+                List.of(),
+                List.of(),
+                List.of(),
+                LocalDateTime.parse("2026-05-10T10:00:00")
+        );
+
+        when(userService.register(any())).thenReturn(registeredUser);
+        User user = UserMapper.toEntity(registeredUser);
+
+        // 2️⃣ LOGIN - otteniamo il token
+        UserPrincipal userPrincipal = new UserPrincipal(user, "");
+
+        when(authService.loginByEmail(any())).thenReturn(new LoginResponseDto(
+                validToken,
+                "Bearer",
+                registeredUser
+        ));
+        when(jwtService.extractUserId(validToken)).thenReturn(userId);
+        when(jwtService.isTokenValid(validToken, userPrincipal)).thenReturn(true);
+        when(customUserDetailsService.loadUserByUsername(userId)).thenReturn(userPrincipal);
+
+        // 3️⃣ AGGIORNA PROFILO con token valido
+        UserResponseDto updatedUser = new UserResponseDto(
+                userId,
+                "mario_rossi",
+                "mario.nuovo@example.com",   // Email modificata
+                "Mario",// Nome
+                "Rossi", // Cognome
+                "mario.nuovo@paypal.com", // PayPal modificato
+                "",
+                "",
+                "",
+                List.of(),
+                List.of(),
+                List.of(),
+                LocalDateTime.parse("2026-05-10T10:00:00")
+        );
+
+        when(userService.updateProfile(any())).thenReturn(updatedUser);
+
+        mockMvc.perform(post("/api/v1/utenti/profilo")
+                        .header("Authorization", "Bearer " + validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "userId": "user-123",
+                              "password": "MySecret123",
+                              "email": "mario.nuovo@example.com",
+                              "firstName": "Mario",
+                              "lastName": "Rossi",
+                              "phone": "3331234567",
+                              "paypalEmail": "mario.nuovo@paypal.com"
+                            }
+                            """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.email").value("mario.nuovo@example.com"))
+                .andExpect(jsonPath("$.paypalEmail").value("mario.nuovo@paypal.com"));
+    }
+
+    @Test
+    void updateProfileWithoutTokenShouldReturnUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/v1/utenti/profilo")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "userId": "user-123",
+                              "currentPassword": "MySecret123",
+                              "email": "mario.nuovo@example.com",
+                              "firstName": "Mario",
+                              "lastName": "Rossi",
+                              "phoneNumber": "3331234567",
+                              "paypalEmail": "mario.nuovo@paypal.com"
+                            }
+                            """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.messaggio").value("Token JWT non valido o scaduto"));
+    }
+
+    @Test
+    void updateProfileWithInvalidTokenShouldReturnUnauthorized() throws Exception {
+        when(jwtService.extractUserId("invalid-token")).thenThrow(new JwtException("invalid token"));
+
+        mockMvc.perform(post("/api/v1/utenti/profilo")
+                        .header("Authorization", "Bearer invalid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "userId": "user-123",
+                              "currentPassword": "MySecret123",
+                              "email": "mario.nuovo@example.com",
+                              "firstName": "Mario",
+                              "lastName": "Rossi",
+                              "phoneNumber": "3331234567",
+                              "paypalEmail": "mario.nuovo@paypal.com"
+                            }
+                            """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.messaggio").value("Token JWT non valido o scaduto"));

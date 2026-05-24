@@ -21,10 +21,10 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), new ErrorResponseDto(
-                HttpServletResponse.SC_UNAUTHORIZED,
+                HttpServletResponse.SC_FORBIDDEN,
                 "Non autorizzato",
                 "Token JWT non valido o scaduto",
                 LocalDateTime.now()

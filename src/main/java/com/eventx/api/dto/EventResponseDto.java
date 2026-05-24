@@ -7,7 +7,7 @@ import java.util.List;
 
 public record EventResponseDto(
         String id,
-        String creationId,
+        String plannerId,
         String name,
         String description,
         String locationId,

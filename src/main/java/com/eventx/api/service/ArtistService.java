@@ -8,6 +8,7 @@ import com.eventx.api.mapper.ArtistMapper;
 import com.eventx.api.models.Artist;
 import com.eventx.api.models.EventStatus;
 import com.eventx.api.repository.ArtistRepository;
+import com.eventx.api.repository.LocationRepository;
 import com.eventx.api.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,13 +22,14 @@ import org.springframework.util.StringUtils;
 public class ArtistService {
 
     private final ArtistRepository artistRepository;
+    private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final UserService userService;
 
     public ArtistResponseDto create(ArtistRequestDto request) {
         ensureUserExists(request.userId());
-        if (artistRepository.existsById(request.userId())) {
-            throw new ConflictException("L'utente è già registrato come artista");
+        if (artistRepository.existsById(request.userId()) || locationRepository.existsById(request.userId())) {
+            throw new ConflictException("L'utente è già registrato come artista o luogo");
         }
 
         Artist artist = Artist.builder()
@@ -45,9 +47,9 @@ public class ArtistService {
 
         Artist saved = artistRepository.save(artist);
 
-        // Aggiorna il flag isArtist sull'utente
+        // Aggiorna artist sull'utente
         var user = userService.getEntityById(request.userId());
-        user.setArtist(true);
+        user.setArtist(saved.getId());
         userService.saveEntity(user);
 
         return ArtistMapper.toResponse(saved);
@@ -82,9 +84,9 @@ public class ArtistService {
         Artist artist = getEntityById(id);
         artistRepository.delete(artist);
 
-        // Rimuovi il flag isArtist sull'utente
+        // Rimuovi artist sull'utente
         userRepository.findById(id).ifPresent(user -> {
-            user.setArtist(false);
+            user.setArtist(null);
             userRepository.save(user);
         });
     }

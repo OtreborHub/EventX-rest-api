@@ -68,10 +68,9 @@ public class UserController {
         userService.deleteById(id);
     }
 
-    @PutMapping("/{id}/profilo")
-    public ResponseEntity<UserResponseDto> updateProfile(@PathVariable String id,
-                                                         @Valid @RequestBody UpdateProfileRequestDto request) {
-        return ResponseEntity.ok(userService.updateProfile(id, request));
+    @PostMapping("/profilo")
+    public ResponseEntity<UserResponseDto> updateProfile(@Valid @RequestBody UpdateProfileRequestDto request) {
+        return ResponseEntity.ok(userService.updateProfile(request));
     }
 
     @PatchMapping("/{id}/password")

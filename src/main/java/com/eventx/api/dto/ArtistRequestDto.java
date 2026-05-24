@@ -4,10 +4,10 @@ import jakarta.validation.constraints.NotBlank;
 
 public record ArtistRequestDto(
         @NotBlank(message = "userId obbligatorio") String userId,
-        @NotBlank(message = "firstName obbligatorio") String firstName,
-        @NotBlank(message = "lastName obbligatorio") String lastName,
+        @NotBlank(message = "Nome obbligatorio") String firstName,
+        @NotBlank(message = "Cognome obbligatorio") String lastName,
+        @NotBlank(message = "Partita Iva obbligatoria") String piva,
         String alias,
-        String piva,
         String phone
 ) {
 }

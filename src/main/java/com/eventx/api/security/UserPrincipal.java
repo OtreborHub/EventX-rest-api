@@ -1,6 +1,8 @@
 package com.eventx.api.security;
 
 import com.eventx.api.models.User;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -22,10 +24,14 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
         if (admins.contains(user.getUsername())) {
-            return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
-        return List.of();
+
+        return authorities;
     }
 
     @Override

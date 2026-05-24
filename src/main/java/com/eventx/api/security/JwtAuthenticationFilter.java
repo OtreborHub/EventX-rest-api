@@ -39,6 +39,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+
+                    logger.info("✅ Auth set: { "+ SecurityContextHolder.getContext().getAuthentication() + " }");
                 }
             }
         } catch (JwtException | IllegalArgumentException ex) {
@@ -53,13 +55,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
 
         String path = request.getServletPath();
+        String method = request.getMethod();
 
-        return path.equals("/api/v1/utenti")
+        boolean isPublic = path.equals("/api/v1/utenti")
                 || path.equals("/api/v1/utenti/login")
                 || path.equals("/api/v1/utenti/login/username")
-                || path.startsWith("/api/v1/eventi")
-                || path.startsWith("/api/v1/artisti")
+                || (path.startsWith("/api/v1/eventi") && method.equals("GET"))
+                || (path.startsWith("/api/v1/artisti") && method.equals("GET"))
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs");
+
+        return isPublic;
     }
 }

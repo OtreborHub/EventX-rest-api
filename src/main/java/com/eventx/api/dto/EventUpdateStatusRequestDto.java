@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record EventRequestDto(
+public record EventUpdateStatusRequestDto(
         @NotBlank String plannerId,
         @NotBlank String name,
         String description,
@@ -15,7 +15,7 @@ public record EventRequestDto(
         @NotNull LocalDateTime date,
         @NotNull @Min(1) Integer duration,
         @Min(0) BigDecimal price,
-        @NotNull @Min(1) Integer capacity
+        @NotNull @Min(1) Integer capacity,
+        EventStatus status
 ) {
 }
-

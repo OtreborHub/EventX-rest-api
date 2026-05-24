@@ -20,9 +20,10 @@ public class Event {
 
     @Id
     private String id;
-    private String creationId;
+    private String plannerId;
     private String name;
     private String description;
+    //@Id
     private String locationId;
     private LocalDateTime date;
     private Integer duration;
@@ -33,4 +34,5 @@ public class Event {
     @Builder.Default
     private List<String> reviews = new ArrayList<>();
     private LocalDateTime registrationDate;
+    private LocalDateTime updateDate;
 }

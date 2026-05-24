@@ -54,9 +54,6 @@ paths:
               username: mario_rossi
               email: mario.rossi@example.com
               password: MySecret123
-              firstName: Mario
-              lastName: Rossi
-              paypalEmail: mario.rossi@paypal.com
       responses:
         '201':
           description: Utente creato
@@ -168,15 +165,13 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/utenti/{id}/profilo:
-    put:
-      tags: [Users]
+  /api/v1/utenti/profilo:
+    post:
+      tags: [ Users ]
       summary: Aggiorna i dati del profilo utente
       description: |
-        Modifica username, email, nome, cognome, telefono e email PayPal.
-        Richiede la **password corrente** per confermare l'identità del chiamante.
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
+        Modifica email, nome, cognome, telefono e email PayPal.
+        Richiede l'**ID utente**, la **password corrente** e la nuova **email**.
       requestBody:
         required: true
         content:
@@ -184,13 +179,13 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateProfileRequestDTO'
             example:
-              currentPassword: "MySecret123"
-              username: "mario_rossi"
-              email: "mario.rossi@example.com"
+              userId: "user_abc123"
+              password: "MySecret123"
+              email: "mario.nuovo@example.com"
               firstName: "Mario"
               lastName: "Rossi"
               phone: "3331234567"
-              paypalEmail: "mario.rossi@paypal.com"
+              paypalEmail: "mario.nuovo@paypal.com"
       responses:
         '200':
           description: Profilo aggiornato
@@ -271,7 +266,7 @@ paths:
             schema:
               $ref: '#/components/schemas/EventRequestDTO'
             example:
-              creationId: "user_abc123"
+              plannerId: "user_abc123"
               name: "Rock in Roma 2026"
               description: "Festival rock estivo"
               locationId: "loc_xyz789"
@@ -279,8 +274,6 @@ paths:
               duration: 180
               price: 45.00
               capacity: 5000
-              expectedPublic: 4500
-              status: PUBLISHED
       responses:
         '201':
           description: Evento creato
@@ -309,7 +302,7 @@ paths:
             type: string
           example: Rock
         - in: query
-          name: creationId
+          name: plannerId
           description: Filtra per ID utente creatore
           schema:
             type: string
@@ -855,18 +848,6 @@ components:
           minLength: 8
           description: Obbligatoria in creazione; opzionale in aggiornamento (se assente la password non cambia)
           example: MySecret123
-        firstName:
-          type: string
-          description: Nome dell'utente
-          example: Mario
-        lastName:
-          type: string
-          description: Cognome dell'utente
-          example: Rossi
-        phone:
-          type: string
-          description: Ignorato in fase di registrazione (inizializzato a ""); modificabile tramite aggiornamento utente
-          example: "3331234567"
         paypalEmail:
           type: string
           format: email
@@ -883,25 +864,11 @@ components:
         email:
           type: string
           format: email
-        firstName:
-          type: string
-          description: Nome dell'utente
-          example: Mario
-        lastName:
-          type: string
-          description: Cognome dell'utente
-          example: Rossi
-        phone:
-          type: string
-          description: Numero di telefono; vuoto alla registrazione, modificabile tramite aggiornamento utente
-          example: "3331234567"
         paypalEmail:
           type: string
           format: email
           description: Email PayPal dell'utente
           example: mario.rossi@paypal.com
-        isAdmin:
-          type: boolean
         isArtist:
           type: boolean
         isLocation:
@@ -916,16 +883,6 @@ components:
           items:
             type: string
           description: ID dei biglietti scaduti/ceduti
-        activeEvents:
-          type: array
-          items:
-            type: string
-          description: ID degli eventi attivi creati dall'utente
-        lastEvents:
-          type: array
-          items:
-            type: string
-          description: ID degli eventi conclusi creati dall'utente
         reviews:
           type: array
           items:
@@ -937,18 +894,22 @@ components:
 
     UpdateProfileRequestDTO:
       type: object
-      required: [currentPassword]
-      description: "Tutti i campi tranne currentPassword sono opzionali: invia solo i campi che vuoi modificare. Lo username non è modificabile dopo la registrazione."
+      required: [ userId, password, email ]
+      description: "DTO per l'aggiornamento del profilo utente. I campi firstName, lastName, phone e paypalEmail sono opzionali."
       properties:
-        currentPassword:
+        userId:
+          type: string
+          description: ID dell'utente da aggiornare
+          example: "user_abc123"
+        password:
           type: string
           description: Password corrente — richiesta per confermare l'identità
           example: MySecret123
         email:
           type: string
           format: email
-          description: Nuova email di accesso (opzionale)
-          example: mario.rossi@example.com
+          description: Nuovo indirizzo email (obbligatorio)
+          example: mario.nuovo@example.com
         firstName:
           type: string
           description: Nome dell'utente (opzionale)
@@ -965,7 +926,7 @@ components:
           type: string
           format: email
           description: Email account PayPal (opzionale)
-          example: mario.rossi@paypal.com
+          example: mario.nuovo@paypal.com
 
     ChangePasswordRequestDTO:
       type: object
@@ -1008,9 +969,9 @@ components:
 
     EventRequestDTO:
       type: object
-      required: [creationId, name, locationId, date, duration, capacity]
+      required: [plannerId, name, locationId, date, duration, capacity]
       properties:
-        creationId:
+        plannerId:
           type: string
           description: ID dell'utente che crea l'evento
         name:
@@ -1040,20 +1001,13 @@ components:
           minimum: 1
           description: Capienza massima
           example: 5000
-        expectedPublic:
-          type: integer
-          minimum: 0
-          description: Pubblico atteso
-          example: 4500
-        status:
-          $ref: '#/components/schemas/EventStatus'
 
     EventResponseDTO:
       type: object
       properties:
         id:
           type: string
-        creationId:
+        plannerId:
           type: string
         name:
           type: string

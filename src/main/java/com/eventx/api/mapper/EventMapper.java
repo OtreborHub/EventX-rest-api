@@ -12,7 +12,7 @@ public final class EventMapper {
     public static EventResponseDto toResponse(Event event) {
         return new EventResponseDto(
                 event.getId(),
-                event.getCreationId(),
+                event.getPlannerId(),
                 event.getName(),
                 event.getDescription(),
                 event.getLocationId(),
